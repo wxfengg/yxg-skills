@@ -1,0 +1,4 @@
+interface:
+  display_name: "YXG MQTT 集成"
+  short_description: "将 @yxg/mqtt 接入微信小程序、App 或网页并验证生命周期与收发"
+  default_prompt: "使用 $yxg-mqtt-use 将 @yxg/mqtt 接入当前项目，先识别平台和现有通信链路，再实现最小接入并验证。"
