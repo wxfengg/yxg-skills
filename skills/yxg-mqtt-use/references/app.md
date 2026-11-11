@@ -4,8 +4,8 @@
 
 | 情况 | 接线 |
 | --- | --- |
-| H5 页面或具有真实原生 WebSocket 的 WebView | 验证平台支持后用 /browser，继续读 browser.md |
-| 微信小程序构建目标 | 用 /weixin，继续读 weixin.md；不要因同一仓库也构建 App 就共用微信工厂 |
+| H5 页面或具有真实原生 WebSocket 的 WebView | 验证平台支持后用 /browser，继续读[网页](browser.md) |
+| 微信小程序构建目标 | 用 /weixin，继续读[微信](weixin.md)；不要因同一仓库也构建 App 就共用微信工厂 |
 | 原生 MQTT SDK／桥已存在 | 用 /native 或根 createSession，核对 EngineFactory 合同 |
 | 只有 uni.connectSocket，没有已验证的浏览器 WebSocket 或 EngineFactory | 不宣称开箱可用；评估已有适配能力和授权范围，不能假扮 wx 或 Browser WebSocket |
 | 没有原生桥且必须 TCP/TLS 原生客户端 | 本包不含原生实现；明确缺口，按请求决定另行实现桥或选择其它获准路径 |
@@ -36,4 +36,4 @@ export function createForNative(options: ClientOptions, bridge: EngineFactory) {
 
 如果现有 SDK 只有“调用成功”的布尔返回，不能推导 Broker ACK／设备 ACK；相应能力不可用，业务请求应在提交前拒绝不支持的语义。原生 SDK 的 ACK、后台冻结、线程回调、重连和强制释放要独立验证。
 
-保留项目权限、网络／后台策略和设备业务 Handler。使用 App 的 onShow/onHide/登出入口接线；不要按页面数量增加原生连接。真机、系统版本和 SDK 版本按实际记录，不能继承浏览器／微信测试结论。
+保留项目权限、网络／后台策略和设备业务 Handler。使用 App 的 onShow/onHide/登出入口接线；不要按页面数量增加原生连接。按[分层验收](validation.md)记录真机、系统版本和 SDK 版本，不能继承浏览器／微信测试结论。

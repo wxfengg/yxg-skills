@@ -1,6 +1,6 @@
 # 可选 DeviceCommunication：设备路由与 MQTT/HTTP
 
-仅当用户需要统一设备路由／双通道调度，或目标已经采用此层时使用。它自己拥有 SessionManager、订阅和 HTTP 调度；禁止再为同一资源叠加 manager／重发队列。简单单连接保留 Session 足够。
+仅当用户需要统一设备路由／双通道调度，或目标已经采用此层时使用。它自己拥有 SessionManager、订阅和 HTTP 调度；同一资源不再叠加 manager 或重复重发队列。已有宿主业务待发列表须明确与协调器的接纳交界，不因接入强制新增双队列。简单单连接保留 Session 足够。
 
 读取实际包 `dist/communication/index.d.ts`、`docs/guide/communication.md`，按已有项目的请求层和 Handler 映射，不从示例猜测服务路径、错误码或协议。
 
@@ -15,7 +15,7 @@
 | policy | background；使用 MQTT 则填 mqtt；使用 HTTP 则填 http，按类型完整填写 |
 | callbacks | onReady/onMessage/onDelivery/onAuthFailure/onError，按业务处理并复查归属 |
 
-mqtt policy 包含 session、qos、retain、subscriptionQos、connectTimeoutMs、subscribeTimeoutMs、cleanupTimeoutMs、retryDelaysMs、offlineTtlMs；http policy 包含 pollIntervalMs、requestTimeoutMs、maxPendingMessages、capacityIncludesInFlight、waitTimeoutMs、registrationCheck、resetReadyOnPullError、readyOrder、queryRequiresIdle。沿用已批准策略，没有固定的“正式默认参数”。不为了省字段拷贝他项目超时。
+按实际类型完整填写所用通道的 policy。MQTT 的 Session 资源／订阅等待与 HTTP 的轮询／接纳容量分属不同层；核对 HTTP 的 capacityIncludesInFlight、readyOrder 和 queryRequiresIdle 是否符合原业务。沿用已批准策略，不复制其他项目的超时、轮询周期或“正式默认参数”。
 
 Topic 必须精确；同 host 不等于同身份，不以当前选中设备推断所有回包。matchesDevice 在共享 Topic 时只允许唯一命中；设备列表删除／切通道使旧归属失效，不迁移已提交或 unknown 命令。
 
@@ -25,6 +25,7 @@ Topic 必须精确；同 host 不等于同身份，不以当前选中设备推�
 - 请求创建时注册 `context.onCancel(() => task.abort())`，结束后注销。宿主请求层不得自动重试控制请求；物理 abort 不保证服务未执行。
 - transmit 仅在 HTTP 状态与业务受理都确认后返回 `{accepted:true}`；不是简单“HTTP 200 就成功”。无法证明未受理的失败按 unknown，不能把超时变成 rejected。
 - pull 返回真实消息数组；协议归一化和设备归属检查仍由项目提供。不存在通用的 /pull-msg 或 /transmit-msg 后端合同。
+- transmit 受理但 pull 为空时，按[无回复取证链](api-contract.md#无回复时的最小取证链)检查接收、过滤与后端链路；不要通过重复提交控制命令来试探，也不凭空数组推断设备离线。
 
 ## 方法与语义
 
@@ -36,9 +37,13 @@ Topic 必须精确；同 host 不等于同身份，不以当前选中设备推�
 - disposeSession：立即作废归属，等待在途工厂／清理；退出先撤销用户业务入口再等待它。
 - captureRoute/isCurrent：返回／提供归属 guard；await 后写 Store 前复查，不能代替 isReady。
 
+`onReady.isCurrent` 在本基线只检查路由归属，不证明仍就绪或仍处于触发回调的连接 epoch。await 后复查 `isReady`；业务若要求断线即作废，还须维护自己的连接／操作代次。不要把核心 recovery 示例中的 epoch guard 当作协调器内建保证；晚到元数据或页面反馈仍由宿主拦截。
+
 ## send 和通知
 
 send(id,payload,options) 返回 CommunicationTicket，不返回设备执行结果。未知／过期入口路由返回 OFFLINE Ticket，不触发 onDelivery（没有合法通道）。有效入口路由的每个结算 Ticket，包括 accepted=false 的配置／编码／容量拒绝，异步 onDelivery 一次。done.catch 与 onDelivery 不重复弹提示，必要时按 operationId 去重；done 始终处理。
+
+接纳与出队按[公共容量规则](api-contract.md#容量与业务接纳)衔接，但先确认当前层暴露的能力：本基线协调器的 MQTT 错误包装只保留 code/evidence，没有公共 capacity 事件，不保证透传核心 reason/requiredBytes/capacity。HTTP 待发容量也不是 MQTT inflight。不能直接复制核心容量等待示例、探入私有 manager 或用 ticket.done 充当槽位释放信号；能力不足时沿用已批准策略并说明限制。协调器已有订阅恢复调度时，不在外层再加一套竞争重试。
 
 | options | MQTT | HTTP |
 | --- | --- | --- |
